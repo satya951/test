@@ -2,7 +2,7 @@ resource "tls_private_key" "keyname" {
  algorithm = "RSA"
 }
 resource "aws_key_pair" "generated_key" {
- key_name = "keyname23"
+ key_name = "satya1"
  public_key = "${tls_private_key.keyname.public_key_openssh}"
  depends_on = [
   tls_private_key.keyname
@@ -18,13 +18,12 @@ resource "local_file" "key" {
 }
 
 resource "aws_vpc" "vpc_name" {
- cidr_block = "10.0.0.0/16"
- instance_tenancy = "default"
- enable_dns_hostnames = "true"
- 
- tags = {
-  Name = "vpc_name-test"
- }
+  cidr_block       = "10.0.0.0/16"
+  instance_tenancy = "default"
+
+  tags = {
+    Name = "main"
+  }
 }
 
 
@@ -72,8 +71,8 @@ resource "aws_security_group" "sg_name" {
 
 resource "aws_subnet" "public" {
  vpc_id = "${aws_vpc.vpc_name.id}"
- cidr_block = "192.168.0.0/24"
- availability_zone = "ap-south-1a"
+ cidr_block = "10.0.0.0/24"
+ availability_zone = "us-east-1a"
  map_public_ip_on_launch = "true"
  
  tags = {
@@ -82,8 +81,8 @@ resource "aws_subnet" "public" {
 }
 resource "aws_subnet" "private" {
  vpc_id = "${aws_vpc.vpc_name.id}"
- cidr_block = "192.168.1.0/24"
- availability_zone = "ap-south-1b"
+ cidr_block = "10.0.3.0/24"
+ availability_zone = "us-east-1a"
  
  tags = {
   Name = "my_private_subnet"
@@ -95,7 +94,7 @@ resource "aws_internet_gateway" "internet_gateway_name" {
  vpc_id = "${aws_vpc.vpc_name.id}"
  
  tags = { 
-  Name = "<internet_gateway_name>"
+  Name = "internet_gateway_name"
  }
 }
 
@@ -121,29 +120,36 @@ resource "aws_route_table_association" "b" {
  subnet_id = "${aws_subnet.private.id}"
  route_table_id = "${aws_route_table.name_of_rt.id}"
 }
+data "aws_ami" "server_ami" {
+  most_recent = true
+  owners      = ["099720109477"]
 
-
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+}
 resource "aws_instance" "wordpress" {
- ami = "ami-03a115bbd6928e698"
+ ami  = data.aws_ami.server_ami.id
  instance_type = "t2.micro"
  key_name = "${aws_key_pair.generated_key.key_name}"
  vpc_security_group_ids = [ "${aws_security_group.sg_name.id}" ]
  subnet_id = "${aws_subnet.public.id}"
  
  tags = {
-  Name = "<Wordpress_instance_name>"
+  Name = "Wordpress_instance_name"
  }
 }
 
 
-resource "aws_instance" "mysql" {
- ami = "ami-04e98b8bcc00d2678"
+resource "aws_instance" "MYSQL" {
+ ami  = data.aws_ami.server_ami.id
  instance_type = "t2.micro"
  key_name = "${aws_key_pair.generated_key.key_name}"
  vpc_security_group_ids = [ "${aws_security_group.sg_name.id}" ]
  subnet_id = "${aws_subnet.private.id}"
-  
+ 
  tags = {
-  Name = "MySQL_instance_name"
+  Name = "mysql_instance_name"
  }
 }
